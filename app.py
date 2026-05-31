@@ -105,7 +105,7 @@ PAGE = """<!DOCTYPE html>
 CARD = """<div class="card">
   <div class="slot">Display {n} ({slot})</div>
   <label>Ticker</label>
-  <input name="ticker_{i}" value="{ticker}" maxlength="6">
+  <input name="ticker_{i}" value="{ticker}" maxlength="12" autocapitalize="characters" autocomplete="off">
 </div>"""
 
 
