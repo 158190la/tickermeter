@@ -14,11 +14,26 @@ CONFIG_PATH = os.path.join(DATA_DIR, "config.json")
 
 DEFAULT_CONFIG = {
     "displays": [
-        {"slot": "d1", "ticker": "SPY"},
+        {"slot": "d1", "tipo": "indices", "titulo": "INDICES",
+         "items": [
+             {"label": "SP500", "symbol": "^GSPC"},
+             {"label": "FTSE", "symbol": "^FTSE"},
+             {"label": "DAX", "symbol": "^GDAXI"},
+             {"label": "NIKKEI", "symbol": "^N225"},
+             {"label": "HANGSE", "symbol": "^HSI"},
+             {"label": "MERVAL", "symbol": "^MERV"},
+         ]},
         {"slot": "d2", "ticker": "MSFT"},
         {"slot": "d3", "ticker": "", "tipo": "treasury",
          "plazos": ["1Y", "3Y", "5Y", "7Y", "10Y"]},
-        {"slot": "d4", "ticker": "QQQ"},
+        {"slot": "d4", "tipo": "monedas", "titulo": "MONEDAS",
+         "items": [
+             {"label": "EUR/USD", "symbol": "EURUSD=X"},
+             {"label": "USD/JPY", "symbol": "JPY=X"},
+             {"label": "GBP/USD", "symbol": "GBPUSD=X"},
+             {"label": "USD/ARS", "symbol": "ARS=X"},
+             {"label": "BTC", "symbol": "BTC-USD"},
+         ]},
     ],
     "sparkline_dias": 60,
     "force_update": False,
@@ -131,6 +146,12 @@ TREASURY_CARD = """<div class="card">
 
 PLAZO_CHK = """<label class="chk"><input type="checkbox" name="plazo_{slot}" value="{plazo}" {checked}> {plazo}</label>"""
 
+INFO_CARD = """<div class="card">
+  <div class="slot">Display {n} ({slot})</div>
+  <label>{titulo}</label>
+  <div style="font-size:14px; padding:8px 0; color:#cdd;">{lista}</div>
+</div>"""
+
 
 @app.route("/")
 def index():
@@ -145,6 +166,12 @@ def index():
                 marcado = "checked" if plazo in activos else ""
                 checks += PLAZO_CHK.format(slot=d["slot"], plazo=plazo, checked=marcado)
             cards += TREASURY_CARD.format(n=i + 1, slot=d["slot"], checks=checks)
+        elif d.get("tipo") in ("indices", "monedas"):
+            items = d.get("items", [])
+            lista = ", ".join(it.get("label", it.get("symbol")) for it in items)
+            cards += INFO_CARD.format(n=i + 1, slot=d["slot"],
+                                      titulo=d.get("titulo", d["tipo"].upper()),
+                                      lista=lista)
         else:
             cards += CARD.format(n=i + 1, i=i, slot=d["slot"], ticker=d["ticker"])
     return PAGE.format(cards=cards, dias=cfg.get("sparkline_dias", 60), token=TOKEN)
@@ -159,6 +186,8 @@ def save():
             elegidos = request.form.getlist(f"plazo_{d['slot']}")
             # Guardar en el orden de PLAZOS_VALIDOS, no en el orden del form
             d["plazos"] = [p for p in PLAZOS_VALIDOS if p in elegidos]
+            continue
+        if d.get("tipo") in ("indices", "monedas"):
             continue
         nuevo = request.form.get(f"ticker_{i}", "").strip().upper()
         if nuevo:
