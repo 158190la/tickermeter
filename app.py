@@ -67,6 +67,13 @@ def api_ack():
     return jsonify({"ok": True})
 
 
+@app.route("/api/reset")
+def api_reset():
+    check_token()
+    save_config(dict(DEFAULT_CONFIG))
+    return jsonify({"ok": True, "config": DEFAULT_CONFIG})
+
+
 # ---- Web de control ----
 PAGE = """<!DOCTYPE html>
 <html lang="es">
