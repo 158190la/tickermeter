@@ -221,8 +221,16 @@ PAGE = """<!DOCTYPE html>
   .chk {{ display:flex; align-items:center; gap:6px; font-size:16px; color:#fff;
           background:#0B2545; padding:8px 12px; border-radius:8px; cursor:pointer; }}
   .chk input {{ width:auto; }}
-  .preview-wrap {{ margin:16px 0 24px; }}
-  .preview-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }}
+  .layout {{ display:flex; gap:20px; align-items:flex-start; }}
+  .col-controls {{ flex:1; min-width:0; }}
+  .col-preview {{ width:230px; flex-shrink:0; position:sticky; top:16px; }}
+  .col-preview h2 {{ font-size:13px; color:#C9A84C; margin:0 0 10px; }}
+  .preview-grid {{ display:flex; flex-direction:column; gap:10px; }}
+  @media (max-width:720px) {{
+    .layout {{ flex-direction:column; }}
+    .col-preview {{ width:100%; position:static; }}
+    .preview-grid {{ display:grid; grid-template-columns:1fr 1fr; }}
+  }}
   .eink {{ background:#e8e8e0; color:#111; border:2px solid #444; border-radius:6px;
            aspect-ratio:250/122; padding:0; overflow:hidden; position:relative;
            font-family:"DejaVu Sans Mono",monospace; }}
@@ -244,10 +252,6 @@ PAGE = """<!DOCTYPE html>
 <body>
 <h1>TickerMeter</h1>
 <div class="sub">Control de activos</div>
-<div class="preview-wrap">
-  <div id="preview" class="preview-grid"></div>
-  <button type="button" class="reload" onclick="cargarPreview()">Recargar vista en vivo</button>
-</div>
 <script>
 const TK = "{token}";
 let SPARK_DIAS = 60;
@@ -263,7 +267,7 @@ function fmtVal(v) {{
 }}
 function cargarPreview() {{
   const cont = document.getElementById("preview");
-  cont.innerHTML = "<div style='grid-column:1/3;text-align:center;color:#8aa'>Cargando datos en vivo...</div>";
+  cont.innerHTML = "<div style='text-align:center;color:#8aa;font-size:12px'>Cargando datos en vivo...</div>";
   fetch("/api/preview?token=" + TK).then(r => r.json()).then(data => {{
     window.SPARK_DIAS = data.sparkline_dias || 60;
     cont.innerHTML = "";
@@ -286,19 +290,28 @@ function cargarPreview() {{
       cont.innerHTML += html;
     }});
   }}).catch(e => {{
-    cont.innerHTML = "<div style='grid-column:1/3;color:#e88'>Error cargando: "+e+"</div>";
+    cont.innerHTML = "<div style='color:#e88;font-size:12px'>Error cargando: "+e+"</div>";
   }});
 }}
 window.addEventListener("load", cargarPreview);
 </script>
-<form method="POST" action="/save?token={token}">
-{cards}
-<div class="global">
-  <label>Dias del sparkline</label>
-  <input name="sparkline_dias" value="{dias}" type="number" min="5" max="365">
+<div class="layout">
+  <div class="col-controls">
+    <form method="POST" action="/save?token={token}">
+    {cards}
+    <div class="global">
+      <label>Dias del sparkline</label>
+      <input name="sparkline_dias" value="{dias}" type="number" min="5" max="365">
+    </div>
+    <button type="submit">Actualizar ahora</button>
+    </form>
+  </div>
+  <div class="col-preview">
+    <h2>Vista en vivo</h2>
+    <div id="preview" class="preview-grid"></div>
+    <button type="button" class="reload" onclick="cargarPreview()">Recargar</button>
+  </div>
 </div>
-<button type="submit">Actualizar ahora</button>
-</form>
 </body>
 </html>"""
 
