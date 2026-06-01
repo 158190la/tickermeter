@@ -16,12 +16,16 @@ DEFAULT_CONFIG = {
     "displays": [
         {"slot": "d1", "ticker": "SPY"},
         {"slot": "d2", "ticker": "MSFT"},
-        {"slot": "d3", "ticker": "NVDA"},
+        {"slot": "d3", "ticker": "", "tipo": "treasury",
+         "plazos": ["1Y", "3Y", "5Y", "7Y", "10Y"]},
         {"slot": "d4", "ticker": "QQQ"},
     ],
     "sparkline_dias": 60,
     "force_update": False,
 }
+
+# Plazos validos de Treasury Constant Maturity en FRED, en orden
+PLAZOS_VALIDOS = ["1M", "3M", "6M", "1Y", "2Y", "3Y", "5Y", "7Y", "10Y", "20Y", "30Y"]
 
 
 def load_config():
@@ -86,6 +90,10 @@ PAGE = """<!DOCTYPE html>
             background:#C9A84C; color:#0B2545; border:none; border-radius:10px;
             margin-top:16px; }}
   .global {{ background:#13355f; border-radius:12px; padding:16px; margin:12px 0; }}
+  .plazos {{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }}
+  .chk {{ display:flex; align-items:center; gap:6px; font-size:16px; color:#fff;
+          background:#0B2545; padding:8px 12px; border-radius:8px; cursor:pointer; }}
+  .chk input {{ width:auto; }}
 </style>
 </head>
 <body>
@@ -108,6 +116,14 @@ CARD = """<div class="card">
   <input name="ticker_{i}" value="{ticker}" maxlength="12" autocapitalize="characters" autocomplete="off">
 </div>"""
 
+TREASURY_CARD = """<div class="card">
+  <div class="slot">Display {n} ({slot})</div>
+  <label>US Treasury Yields &mdash; eleg&iacute; los plazos</label>
+  <div class="plazos">{checks}</div>
+</div>"""
+
+PLAZO_CHK = """<label class="chk"><input type="checkbox" name="plazo_{slot}" value="{plazo}" {checked}> {plazo}</label>"""
+
 
 @app.route("/")
 def index():
@@ -115,7 +131,15 @@ def index():
     cfg = load_config()
     cards = ""
     for i, d in enumerate(cfg["displays"]):
-        cards += CARD.format(n=i + 1, i=i, slot=d["slot"], ticker=d["ticker"])
+        if d.get("tipo") == "treasury":
+            activos = d.get("plazos", [])
+            checks = ""
+            for plazo in PLAZOS_VALIDOS:
+                marcado = "checked" if plazo in activos else ""
+                checks += PLAZO_CHK.format(slot=d["slot"], plazo=plazo, checked=marcado)
+            cards += TREASURY_CARD.format(n=i + 1, slot=d["slot"], checks=checks)
+        else:
+            cards += CARD.format(n=i + 1, i=i, slot=d["slot"], ticker=d["ticker"])
     return PAGE.format(cards=cards, dias=cfg.get("sparkline_dias", 60), token=TOKEN)
 
 
@@ -124,6 +148,11 @@ def save():
     check_token()
     cfg = load_config()
     for i, d in enumerate(cfg["displays"]):
+        if d.get("tipo") == "treasury":
+            elegidos = request.form.getlist(f"plazo_{d['slot']}")
+            # Guardar en el orden de PLAZOS_VALIDOS, no en el orden del form
+            d["plazos"] = [p for p in PLAZOS_VALIDOS if p in elegidos]
+            continue
         nuevo = request.form.get(f"ticker_{i}", "").strip().upper()
         if nuevo:
             d["ticker"] = nuevo
